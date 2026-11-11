@@ -1,1 +1,6 @@
+markdown-it-py==4.3.0
+mdurl==0.1.2
 psutil==7.2.2
+Pygments==2.21.0
+rich==15.0.0
+-e git+ssh://git@github.com/MourchidFOLARIN/system-info.git@fcacce4a04543f0f0db7b962ef45a65f0343c62d#egg=system_info

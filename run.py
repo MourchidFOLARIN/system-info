@@ -1,67 +1,105 @@
-
 import platform
 import socket
 import psutil
 import os
 from datetime import datetime
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
 
+console = Console()
+def get_cpu_model():
+    try:
+        with open("/proc/cpuinfo", "r") as file:
+            for line in file:
+                if line.startswith("model name"):
+                    return line.split(":", 1)[1].strip()
+    except OSError:
+        pass
+
+    return platform.processor() or "Inconnu"
 
 def get_system_info():
-    print("=" * 55)
-    print("          INFORMATIONS SUR LA MACHINE")
-    print("=" * 55)
-
-    # Informations générales
-    print("\n[1] SYSTEME")
-    print("Système :", platform.system())
-    print("Version :", platform.version())
-    print("Architecture :", platform.machine())
-    print("Nom de la machine :", platform.node())
-    print("Nom de l'utilisateur :", os.getlogin())
-
-    # Informations processeur
-    print("\n[2] PROCESSEUR")
-    print("Processeur :", platform.processor())
-    print("Cœurs physiques :", psutil.cpu_count(logical=False))
-    print("Cœurs logiques :", psutil.cpu_count(logical=True))
-    print("Utilisation CPU :", psutil.cpu_percent(interval=1), "%")
-
-    # Mémoire RAM
-    print("\n[3] MEMOIRE RAM")
-    ram = psutil.virtual_memory()
-    print("RAM totale :", round(ram.total / (1024**3), 2), "Go")
-    print("RAM utilisée :", round(ram.used / (1024**3), 2), "Go")
-    print("RAM disponible :", round(ram.available / (1024**3), 2), "Go")
-    print("Utilisation :", ram.percent, "%")
-
-    # Stockage
-    print("\n[4] STOCKAGE")
-    partition = os.environ.get("SystemDrive", "/") + (
-        "\\" if platform.system() == "Windows" else ""
+    console.print(
+        Panel.fit(
+            "[bold cyan]SYSTEM INFO[/bold cyan]\n"
+            "[white]Rapport détaillé de la machine[/white]",
+            border_style="cyan"
+        )
     )
-    disk = psutil.disk_usage(partition)
-    print("Espace total :", round(disk.total / (1024**3), 2), "Go")
-    print("Espace utilisé :", round(disk.used / (1024**3), 2), "Go")
-    print("Espace libre :", round(disk.free / (1024**3), 2), "Go")
 
-    # Réseau
-    print("\n[5] RESEAU")
-    print("Nom d'hôte :", socket.gethostname())
+    table = Table(title="Informations générales", border_style="cyan")
+    table.add_column("Élément", style="cyan")
+    table.add_column("Valeur", style="white")
+
+    table.add_row("Système", platform.system())
+    table.add_row("Version", platform.version())
+    table.add_row("Architecture", platform.machine())
+    table.add_row("Nom de la machine", platform.node())
+    table.add_row("Utilisateur", os.getlogin())
+
+    console.print(table)
+
+    cpu = Table(title="Processeur", border_style="green")
+    cpu.add_column("Élément", style="green")
+    cpu.add_column("Valeur")
+
+    cpu.add_row("Processeur", get_cpu_model())
+    cpu.add_row("Cœurs physiques", str(psutil.cpu_count(logical=False)))
+    cpu.add_row("Cœurs logiques", str(psutil.cpu_count(logical=True)))
+    cpu.add_row("Utilisation CPU", f"{psutil.cpu_percent(interval=1)} %")
+
+    console.print(cpu)
+
+    ram = psutil.virtual_memory()
+
+    memory = Table(title="Mémoire RAM", border_style="yellow")
+    memory.add_column("Élément", style="yellow")
+    memory.add_column("Valeur")
+
+    memory.add_row("RAM totale", f"{ram.total / (1024**3):.2f} Go")
+    memory.add_row("RAM utilisée", f"{ram.used / (1024**3):.2f} Go")
+    memory.add_row("RAM disponible", f"{ram.available / (1024**3):.2f} Go")
+    memory.add_row("Utilisation", f"{ram.percent} %")
+
+    console.print(memory)
+
+    partition = "/" if platform.system() != "Windows" else os.environ.get("SystemDrive", "C:") + "\\"
+    disk = psutil.disk_usage(partition)
+
+    storage = Table(title="Stockage", border_style="magenta")
+    storage.add_column("Élément", style="magenta")
+    storage.add_column("Valeur")
+
+    storage.add_row("Espace total", f"{disk.total / (1024**3):.2f} Go")
+    storage.add_row("Espace utilisé", f"{disk.used / (1024**3):.2f} Go")
+    storage.add_row("Espace libre", f"{disk.free / (1024**3):.2f} Go")
+
+    console.print(storage)
+
+    network = Table(title="Réseau", border_style="blue")
+    network.add_column("Élément", style="blue")
+    network.add_column("Valeur")
+
+    hostname = socket.gethostname()
 
     try:
-        hostname = socket.gethostname()
         ip = socket.gethostbyname(hostname)
-        print("Adresse IP :", ip)
     except socket.gaierror:
-        print("Adresse IP : indisponible")
+        ip = "Indisponible"
 
-    # Date et heure
-    print("\n[6] DATE ET HEURE")
-    print(datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+    network.add_row("Nom d'hôte", hostname)
+    network.add_row("Adresse IP", ip)
 
-    print("\n" + "=" * 55)
-    print("          FIN DU RAPPORT SYSTEME")
-    print("=" * 55)
+    console.print(network)
+
+    console.print(
+        Panel(
+            datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+            title="Date et heure",
+            border_style="white"
+        )
+    )
 
 
 if __name__ == "__main__":
